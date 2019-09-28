@@ -21,7 +21,7 @@ test:
 	go test -race -count 1 ./...
 
 deploy:
-	gcloud app deploy --no-promote
+	gcloud app deploy --version $$(git rev-parse --short HEAD) --no-promote
 
 install-tools:
 	GO111MODULE=off go get -u golang.org/x/tools/cmd/goimports golang.org/x/lint/golint github.com/golangci/golangci-lint/cmd/golangci-lint

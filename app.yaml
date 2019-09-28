@@ -1,2 +1,2 @@
 runtime: go112
-service: appengine-playground
+service: playground
