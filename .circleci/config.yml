@@ -6,10 +6,6 @@ jobs:
       - image: 178inaba/golangci-lint:1.12
     steps:
       - checkout
-      - run:
-          name: Install tools
-          command: |
-            make -s install-tools
       - restore_cache:
           name: Restore module caches
           keys:
