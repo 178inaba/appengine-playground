@@ -1,6 +1,6 @@
 .PHONY: all mod-download fmt fmt-diff ci-lint lint vet test install-tools
 
-all: mod-download fmt-diff ci-lint lint vet test
+all: fmt-diff ci-lint lint vet test
 
 mod-download:
 	go mod download
