@@ -1,4 +1,4 @@
-.PHONY: all mod-download fmt fmt-diff ci-lint lint vet test install-tools
+.PHONY: all mod-download fmt fmt-diff ci-lint lint vet test deploy install-tools
 
 all: fmt-diff ci-lint lint vet test
 
