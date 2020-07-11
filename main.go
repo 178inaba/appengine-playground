@@ -27,5 +27,8 @@ func main() {
 }
 
 func hello(c echo.Context) error {
+	c.Logger().Info("Start.")
+	defer c.Logger().Info("End.")
+
 	return c.String(http.StatusOK, "Hello, World!")
 }
