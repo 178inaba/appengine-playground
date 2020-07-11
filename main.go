@@ -18,6 +18,7 @@ import (
 func main() {
 	ctx := context.Background()
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	log.SetFlags(0)
 
 	loggingClient, err := logging.NewClient(ctx, projectID)
 	if err != nil {
