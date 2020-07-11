@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -13,12 +14,15 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echolog "github.com/labstack/gommon/log"
+	mrpb "google.golang.org/genproto/googleapis/api/monitoredres"
 )
 
 func main() {
 	ctx := context.Background()
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	log.SetFlags(0)
+
+	zone := metadataZone(ctx)
 
 	loggingClient, err := logging.NewClient(ctx, projectID)
 	if err != nil {
@@ -28,16 +32,27 @@ func main() {
 
 	// ---
 	logName := "my-log"
-	logger := loggingClient.Logger(logName).StandardLogger(logging.Info)
-	logger.Println("hello world")
+	logger := loggingClient.Logger(logName, logging.CommonResource(&mrpb.MonitoredResource{
+		Type: "gae_app",
+		Labels: map[string]string{
+			"module_id":  os.Getenv("GAE_SERVICE"),
+			"project_id": projectID,
+			"version_id": os.Getenv("GAE_VERSION"),
+			"zone":       zone,
+		},
+	}))
+	stdLogger := logger.StandardLogger(logging.Info)
+	stdLogger.Println("hello world")
 	// ---
+
+	ih := &IndexHandler{logger: logger}
 
 	e := echo.New()
 	e.Logger.SetLevel(echolog.INFO)
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	e.GET("/", index)
+	e.GET("/", ih.index)
 	e.GET("/hello", hello)
 	e.GET("/_ah/warmup", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
 
@@ -50,7 +65,34 @@ func main() {
 	e.Logger.Fatalf("%v.", e.Start(fmt.Sprintf(":%s", port)))
 }
 
-func index(c echo.Context) error {
+func metadataZone(ctx context.Context) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://metadata/computeMetadata/v1/instance/zone", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Metadata-Flavor", "Google")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	bs, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	ss := strings.Split(string(bs), "/")
+
+	return ss[len(ss)-1], nil
+}
+
+type IndexHandler struct {
+	logger *logging.Logger
+}
+
+func (h *IndexHandler) index(c echo.Context) error {
 	c.Logger().Info("Start.")
 	defer c.Logger().Info("End.")
 
