@@ -17,6 +17,9 @@ func main() {
 	e.Use(middleware.Recover())
 
 	e.GET("/", hello)
+	e.GET("/_ah/start", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
+	e.GET("/_ah/stop", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
+	e.GET("/_ah/warmup", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
 
 	port := os.Getenv("PORT")
 	if port != "" {
