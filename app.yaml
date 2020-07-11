@@ -1,2 +1,4 @@
 runtime: go114
 service: playground
+inbound_services:
+  - warmup
