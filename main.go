@@ -33,13 +33,7 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	e.GET("/", func(c echo.Context) error {
-		c.Logger().Info("Start.")
-		defer c.Logger().Info("End.")
-		logger.Println("hello world")
-
-		return c.String(http.StatusOK, "Hello, World!")
-	})
+	e.GET("/", hello)
 
 	port := os.Getenv("PORT")
 	if port != "" {
