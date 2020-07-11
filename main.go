@@ -36,9 +36,8 @@ func main() {
 	}
 	defer loggingClient.Close()
 
-	// ---
 	service := os.Getenv("GAE_SERVICE")
-	logger := loggingClient.Logger(service, logging.CommonResource(&mrpb.MonitoredResource{
+	opt := logging.CommonResource(&mrpb.MonitoredResource{
 		Type: "gae_app",
 		Labels: map[string]string{
 			"module_id":  service,
@@ -46,12 +45,11 @@ func main() {
 			"version_id": os.Getenv("GAE_VERSION"),
 			"zone":       zone,
 		},
-	}))
-	stdLogger := logger.StandardLogger(logging.Info)
-	stdLogger.Println("hello world")
-	// ---
+	})
+	reqLogger := loggingClient.Logger(fmt.Sprintf("%s_request", service), opt)
+	appLogger := loggingClient.Logger(fmt.Sprintf("%s_application", service), opt)
 
-	ih := &IndexHandler{logger: logger}
+	ih := &IndexHandler{requestLogger: reqLogger, applicationLogger: appLogger}
 
 	e := echo.New()
 	e.Logger.SetLevel(echolog.INFO)
@@ -72,7 +70,8 @@ func main() {
 }
 
 type IndexHandler struct {
-	logger *logging.Logger
+	requestLogger     *logging.Logger
+	applicationLogger *logging.Logger
 }
 
 func (h *IndexHandler) index(c echo.Context) error {
@@ -85,7 +84,7 @@ func (h *IndexHandler) index(c echo.Context) error {
 	hf := &propagation.HTTPFormat{}
 	sc, _ := hf.SpanContextFromRequest(req)
 	trace := fmt.Sprintf("projects/%s/traces/%s", projectID, sc.TraceID)
-	h.logger.Log(logging.Entry{
+	h.requestLogger.Log(logging.Entry{
 		Timestamp: time.Now(),
 		Severity:  logging.Error,
 		HTTPRequest: &logging.HTTPRequest{
@@ -134,7 +133,7 @@ func (h *IndexHandler) index(c echo.Context) error {
 		//Operation *logpb.LogEntryOperation
 	})
 
-	h.logger.Log(logging.Entry{
+	h.applicationLogger.Log(logging.Entry{
 		Timestamp:    time.Now(),
 		Severity:     logging.Critical,
 		Trace:        trace,
