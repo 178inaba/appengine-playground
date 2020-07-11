@@ -56,18 +56,22 @@ func hello(c echo.Context) error {
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	if projectID != "" {
 		traceHeader := c.Request().Header.Get("X-Cloud-Trace-Context")
+		fmt.Println(traceHeader)
 		traceParts := strings.Split(traceHeader, "/")
 		if len(traceParts) > 0 && len(traceParts[0]) > 0 {
 			trace = fmt.Sprintf("projects/%s/traces/%s", projectID, traceParts[0])
 		}
 	}
 
-	log.Println(Entry{
-		Severity:  "NOTICE",
-		Message:   "This is the default display field.",
-		Component: "arbitrary-property",
-		Trace:     trace,
-	})
+	log.Println(Entry{Severity: "DEFAULT", Message: "Default", Trace: trace})
+	log.Println(Entry{Severity: "DEBUG", Message: "Debug", Trace: trace})
+	log.Println(Entry{Severity: "INFO", Message: "Info", Trace: trace})
+	log.Println(Entry{Severity: "NOTICE", Message: "Notice", Trace: trace})
+	log.Println(Entry{Severity: "WARNING", Message: "Warning", Trace: trace})
+	log.Println(Entry{Severity: "ERROR", Message: "Error", Trace: trace})
+	log.Println(Entry{Severity: "CRITICAL", Message: "Critical", Trace: trace})
+	log.Println(Entry{Severity: "ALERT", Message: "Alert", Trace: trace})
+	log.Println(Entry{Severity: "EMERGENCY", Message: "Emergency", Trace: trace})
 
 	return c.String(http.StatusOK, "Hello, World!")
 }
@@ -77,9 +81,6 @@ type Entry struct {
 	Message  string `json:"message"`
 	Severity string `json:"severity,omitempty"`
 	Trace    string `json:"logging.googleapis.com/trace,omitempty"`
-
-	// Stackdriver Log Viewer allows filtering and display of this as `jsonPayload.component`.
-	Component string `json:"component,omitempty"`
 }
 
 // String renders an entry structure to the JSON format expected by Stackdriver.
