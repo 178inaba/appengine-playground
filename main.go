@@ -9,12 +9,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/logging"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echolog "github.com/labstack/gommon/log"
 	mrpb "google.golang.org/genproto/googleapis/api/monitoredres"
+	logpb "google.golang.org/genproto/googleapis/logging/v2"
 )
 
 func main() {
@@ -34,11 +36,12 @@ func main() {
 	defer loggingClient.Close()
 
 	// ---
-	logName := "my-log"
+	service := os.Getenv("GAE_SERVICE")
+	logName := fmt.Sprintf("projects/%s/logs/%s", projectID, service)
 	logger := loggingClient.Logger(logName, logging.CommonResource(&mrpb.MonitoredResource{
 		Type: "gae_app",
 		Labels: map[string]string{
-			"module_id":  os.Getenv("GAE_SERVICE"),
+			"module_id":  service,
 			"project_id": projectID,
 			"version_id": os.Getenv("GAE_VERSION"),
 			"zone":       zone,
@@ -68,29 +71,6 @@ func main() {
 	e.Logger.Fatalf("%v.", e.Start(fmt.Sprintf(":%s", port)))
 }
 
-func metadataZone(ctx context.Context) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://metadata/computeMetadata/v1/instance/zone", nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Metadata-Flavor", "Google")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	bs, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	ss := strings.Split(string(bs), "/")
-
-	return ss[len(ss)-1], nil
-}
-
 type IndexHandler struct {
 	logger *logging.Logger
 }
@@ -98,6 +78,69 @@ type IndexHandler struct {
 func (h *IndexHandler) index(c echo.Context) error {
 	c.Logger().Info("Start.")
 	defer c.Logger().Info("End.")
+
+	var trace string
+	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	if projectID != "" {
+		traceHeader := c.Request().Header.Get("X-Cloud-Trace-Context")
+		traceParts := strings.Split(traceHeader, "/")
+		if len(traceParts) > 0 && len(traceParts[0]) > 0 {
+			trace = fmt.Sprintf("projects/%s/traces/%s", projectID, traceParts[0])
+		}
+	}
+
+	h.logger.Log(logging.Entry{
+		Timestamp: time.Now(),
+		Severity:  logging.Error,
+		HTTPRequest: &logging.HTTPRequest{
+			Request: c.Request(),
+
+			// RequestSize is the size of the HTTP request message in bytes, including
+			// the request headers and the request body.
+			//RequestSize int64
+
+			// Status is the response code indicating the status of the response.
+			// Examples: 200, 404.
+			//Status int
+
+			// ResponseSize is the size of the HTTP response message sent back to the client, in bytes,
+			// including the response headers and the response body.
+			//ResponseSize int64
+
+			// Latency is the request processing latency on the server, from the time the request was
+			// received until the response was sent.
+			//Latency time.Duration
+
+			// LocalIP is the IP address (IPv4 or IPv6) of the origin server that the request
+			// was sent to.
+			//LocalIP string
+
+			// RemoteIP is the IP address (IPv4 or IPv6) of the client that issued the
+			// HTTP request. Examples: "192.168.1.1", "FE80::0202:B3FF:FE1E:8329".
+			//RemoteIP string
+
+			// CacheHit reports whether an entity was served from cache (with or without
+			// validation).
+			//CacheHit bool
+
+			// CacheValidatedWithOriginServer reports whether the response was
+			// validated with the origin server before being served from cache. This
+			// field is only meaningful if CacheHit is true.
+			//CacheValidatedWithOriginServer bool
+		},
+		Trace:        trace,
+		TraceSampled: true,
+		SourceLocation: &logpb.LogEntrySourceLocation{
+			File:     "main.go",
+			Line:     100,
+			Function: "index",
+		},
+		//Payload interface{}
+		//Labels map[string]string
+		//InsertID string
+		//Operation *logpb.LogEntryOperation
+		//SpanID string
+	})
 
 	return c.String(http.StatusOK, "Index!")
 }
@@ -127,6 +170,29 @@ func hello(c echo.Context) error {
 	log.Println(Entry{Severity: "EMERGENCY", Message: "Emergency", Trace: trace})
 
 	return c.String(http.StatusOK, "Hello, World!")
+}
+
+func metadataZone(ctx context.Context) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://metadata/computeMetadata/v1/instance/zone", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Metadata-Flavor", "Google")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	bs, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	ss := strings.Split(string(bs), "/")
+
+	return ss[len(ss)-1], nil
 }
 
 // Entry defines a log entry.
