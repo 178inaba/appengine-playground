@@ -22,7 +22,10 @@ func main() {
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	log.SetFlags(0)
 
-	zone := metadataZone(ctx)
+	zone, err := metadataZone(ctx)
+	if err != nil {
+		log.Fatalf("metadata zone: %s.", err)
+	}
 
 	loggingClient, err := logging.NewClient(ctx, projectID)
 	if err != nil {
