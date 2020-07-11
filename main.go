@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/logging"
+	"contrib.go.opencensus.io/exporter/stackdriver/propagation"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echolog "github.com/labstack/gommon/log"
@@ -78,21 +79,16 @@ func (h *IndexHandler) index(c echo.Context) error {
 	c.Logger().Info("Start.")
 	defer c.Logger().Info("End.")
 
-	var trace string
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	if projectID != "" {
-		traceHeader := c.Request().Header.Get("X-Cloud-Trace-Context")
-		traceParts := strings.Split(traceHeader, "/")
-		if len(traceParts) > 0 && len(traceParts[0]) > 0 {
-			trace = fmt.Sprintf("projects/%s/traces/%s", projectID, traceParts[0])
-		}
-	}
 
+	req := c.Request()
+	sc, _ := propagation.HTTPFormat{}.SpanContextFromRequest(req)
+	trace := fmt.Sprintf("projects/%s/traces/%s", projectID, sc.TraceID)
 	h.logger.Log(logging.Entry{
 		Timestamp: time.Now(),
 		Severity:  logging.Error,
 		HTTPRequest: &logging.HTTPRequest{
-			Request: c.Request(),
+			Request: req,
 
 			// RequestSize is the size of the HTTP request message in bytes, including
 			// the request headers and the request body.
@@ -129,16 +125,28 @@ func (h *IndexHandler) index(c echo.Context) error {
 		},
 		Trace:        trace,
 		TraceSampled: true,
-		SourceLocation: &logpb.LogEntrySourceLocation{
-			File:     "main.go",
-			Line:     100,
-			Function: "index",
-		},
+		SpanID:       sc.SpanID.String(),
 		//Payload interface{}
 		//Labels map[string]string
 		//InsertID string
 		//Operation *logpb.LogEntryOperation
-		//SpanID string
+	})
+
+	h.logger.Log(logging.Entry{
+		Timestamp:    time.Now(),
+		Severity:     logging.Critical,
+		Trace:        trace,
+		TraceSampled: true,
+		SourceLocation: &logpb.LogEntrySourceLocation{
+			File:     "main.go",
+			Line:     101,
+			Function: "index",
+		},
+		SpanID:  sc.SpanID.String(),
+		Payload: "hello log!!",
+		//Labels map[string]string
+		//InsertID string
+		//Operation *logpb.LogEntryOperation
 	})
 
 	return c.String(http.StatusOK, "Index!")
