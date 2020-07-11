@@ -37,8 +37,7 @@ func main() {
 
 	// ---
 	service := os.Getenv("GAE_SERVICE")
-	logName := fmt.Sprintf("projects/%s/logs/%s", projectID, service)
-	logger := loggingClient.Logger(logName, logging.CommonResource(&mrpb.MonitoredResource{
+	logger := loggingClient.Logger(service, logging.CommonResource(&mrpb.MonitoredResource{
 		Type: "gae_app",
 		Labels: map[string]string{
 			"module_id":  service,
