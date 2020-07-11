@@ -1,16 +1,33 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 
+	"cloud.google.com/go/logging"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 )
 
 func main() {
+	ctx := context.Background()
+	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+
+	loggingClient, err := logging.NewClient(ctx, projectID)
+	if err != nil {
+		log.Fatalf("New logging client: %s.", err)
+	}
+	defer loggingClient.Close()
+
+	// ---
+	logName := "my-log"
+	logger := loggingClient.Logger(logName).StandardLogger(logging.Info)
+	logger.Println("hello world")
+	// ---
+
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
 	e.Use(middleware.Logger())
