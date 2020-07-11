@@ -37,6 +37,7 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
+	e.GET("/_ah/warmup", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
 	e.GET("/", hello)
 
 	port := os.Getenv("PORT")
