@@ -40,7 +40,7 @@ func main() {
 	e.GET("/", hello)
 
 	port := os.Getenv("PORT")
-	if port != "" {
+	if port == "" {
 		port = "8080"
 		e.Logger.Debugf("Defaulting to port %s.", port)
 	}
