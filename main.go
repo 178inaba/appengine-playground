@@ -82,13 +82,15 @@ func (h *IndexHandler) index(c echo.Context) error {
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 
 	req := c.Request()
-	sc, _ := propagation.HTTPFormat{}.SpanContextFromRequest(req)
+	hf := &propagation.HTTPFormat{}
+	sc, _ := hf.SpanContextFromRequest(req)
 	trace := fmt.Sprintf("projects/%s/traces/%s", projectID, sc.TraceID)
 	h.logger.Log(logging.Entry{
 		Timestamp: time.Now(),
 		Severity:  logging.Error,
 		HTTPRequest: &logging.HTTPRequest{
 			Request: req,
+			Latency: 10 * time.Second,
 
 			// RequestSize is the size of the HTTP request message in bytes, including
 			// the request headers and the request body.
