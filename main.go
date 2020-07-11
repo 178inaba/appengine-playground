@@ -37,8 +37,9 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
+	e.GET("/", index)
+	e.GET("/hello", hello)
 	e.GET("/_ah/warmup", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
-	e.GET("/", hello)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -47,6 +48,13 @@ func main() {
 	}
 
 	e.Logger.Fatalf("%v.", e.Start(fmt.Sprintf(":%s", port)))
+}
+
+func index(c echo.Context) error {
+	c.Logger().Info("Start.")
+	defer c.Logger().Info("End.")
+
+	return c.String(http.StatusOK, "Index!")
 }
 
 func hello(c echo.Context) error {
