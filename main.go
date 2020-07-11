@@ -74,37 +74,8 @@ type IndexHandler struct {
 	applicationLogger *logging.Logger
 }
 
-type loggingResponseWriter struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func NewLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
-	return &loggingResponseWriter{w, http.StatusOK}
-}
-
-func (lrw *loggingResponseWriter) WriteHeader(code int) {
-	lrw.statusCode = code
-	lrw.ResponseWriter.WriteHeader(code)
-}
-
-func wrapHandlerWithLogging(wrappedHandler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		log.Printf("--> %s %s", req.Method, req.URL.Path)
-
-		lrw := NewLoggingResponseWriter(w)
-		wrappedHandler.ServeHTTP(lrw, req)
-
-		statusCode := lrw.statusCode
-		log.Printf("<-- %d %s", statusCode, http.StatusText(statusCode))
-	})
-}
-
 func (h *IndexHandler) Logger(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		lrw := NewLoggingResponseWriter(c.Response().Writer)
-		c.Response().Writer = lrw
-
 		start := time.Now()
 		if err := next(c); err != nil {
 			c.Error(err)
@@ -116,6 +87,8 @@ func (h *IndexHandler) Logger(next echo.HandlerFunc) echo.HandlerFunc {
 		req := c.Request()
 		remoteIP := strings.Split(req.Header.Get("X-Forwarded-For"), ",")[0]
 
+		resp := c.Response()
+
 		hf := &propagation.HTTPFormat{}
 		sc, _ := hf.SpanContextFromRequest(req)
 		trace := fmt.Sprintf("projects/%s/traces/%s", projectID, sc.TraceID)
@@ -123,30 +96,15 @@ func (h *IndexHandler) Logger(next echo.HandlerFunc) echo.HandlerFunc {
 			Timestamp: time.Now(),
 			Severity:  logging.Error,
 			HTTPRequest: &logging.HTTPRequest{
-				Request:  req,
-				Latency:  end.Sub(start),
-				Status:   lrw.statusCode,
-				RemoteIP: remoteIP,
-
-				// RequestSize is the size of the HTTP request message in bytes, including
-				// the request headers and the request body.
-				//RequestSize int64
-
-				// ResponseSize is the size of the HTTP response message sent back to the client, in bytes,
-				// including the response headers and the response body.
-				//ResponseSize int64
-
-				// LocalIP is the IP address (IPv4 or IPv6) of the origin server that the request
-				// was sent to.
-				//LocalIP string
+				Request:      req,
+				Latency:      end.Sub(start),
+				Status:       resp.Status,
+				RemoteIP:     remoteIP,
+				ResponseSize: resp.Size,
 			},
 			Trace:        trace,
 			TraceSampled: true,
 			SpanID:       sc.SpanID.String(),
-			//Payload interface{}
-			//Labels map[string]string
-			//InsertID string
-			//Operation *logpb.LogEntryOperation
 		})
 
 		return nil
@@ -175,9 +133,6 @@ func (h *IndexHandler) index(c echo.Context) error {
 		},
 		SpanID:  sc.SpanID.String(),
 		Payload: "hello log!!",
-		//Labels map[string]string
-		//InsertID string
-		//Operation *logpb.LogEntryOperation
 	})
 
 	return c.String(http.StatusTeapot, "Index!")
