@@ -53,7 +53,7 @@ func main() {
 
 	e := echo.New()
 	e.Logger.SetLevel(echolog.INFO)
-	e.Use(middleware.Logger())
+	e.Use(ih.Logger)
 	e.Use(middleware.Recover())
 
 	e.GET("/", ih.index)
@@ -74,6 +74,85 @@ type IndexHandler struct {
 	applicationLogger *logging.Logger
 }
 
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func NewLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
+	return &loggingResponseWriter{w, http.StatusOK}
+}
+
+func (lrw *loggingResponseWriter) WriteHeader(code int) {
+	lrw.statusCode = code
+	lrw.ResponseWriter.WriteHeader(code)
+}
+
+func wrapHandlerWithLogging(wrappedHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		log.Printf("--> %s %s", req.Method, req.URL.Path)
+
+		lrw := NewLoggingResponseWriter(w)
+		wrappedHandler.ServeHTTP(lrw, req)
+
+		statusCode := lrw.statusCode
+		log.Printf("<-- %d %s", statusCode, http.StatusText(statusCode))
+	})
+}
+
+func (h *IndexHandler) Logger(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		lrw := NewLoggingResponseWriter(c.Response().Writer)
+		c.Response().Writer = lrw
+
+		start := time.Now()
+		if err := next(c); err != nil {
+			c.Error(err)
+		}
+
+		end := time.Now()
+
+		projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+		req := c.Request()
+		remoteIP := strings.Split(req.Header.Get("X-Forwarded-For"), ",")[0]
+
+		hf := &propagation.HTTPFormat{}
+		sc, _ := hf.SpanContextFromRequest(req)
+		trace := fmt.Sprintf("projects/%s/traces/%s", projectID, sc.TraceID)
+		h.requestLogger.Log(logging.Entry{
+			Timestamp: time.Now(),
+			Severity:  logging.Error,
+			HTTPRequest: &logging.HTTPRequest{
+				Request:  req,
+				Latency:  end.Sub(start),
+				Status:   lrw.statusCode,
+				RemoteIP: remoteIP,
+
+				// RequestSize is the size of the HTTP request message in bytes, including
+				// the request headers and the request body.
+				//RequestSize int64
+
+				// ResponseSize is the size of the HTTP response message sent back to the client, in bytes,
+				// including the response headers and the response body.
+				//ResponseSize int64
+
+				// LocalIP is the IP address (IPv4 or IPv6) of the origin server that the request
+				// was sent to.
+				//LocalIP string
+			},
+			Trace:        trace,
+			TraceSampled: true,
+			SpanID:       sc.SpanID.String(),
+			//Payload interface{}
+			//Labels map[string]string
+			//InsertID string
+			//Operation *logpb.LogEntryOperation
+		})
+
+		return nil
+	}
+}
+
 func (h *IndexHandler) index(c echo.Context) error {
 	c.Logger().Info("Start.")
 	defer c.Logger().Info("End.")
@@ -84,55 +163,6 @@ func (h *IndexHandler) index(c echo.Context) error {
 	hf := &propagation.HTTPFormat{}
 	sc, _ := hf.SpanContextFromRequest(req)
 	trace := fmt.Sprintf("projects/%s/traces/%s", projectID, sc.TraceID)
-	h.requestLogger.Log(logging.Entry{
-		Timestamp: time.Now(),
-		Severity:  logging.Error,
-		HTTPRequest: &logging.HTTPRequest{
-			Request: req,
-			Latency: 10 * time.Second,
-
-			// RequestSize is the size of the HTTP request message in bytes, including
-			// the request headers and the request body.
-			//RequestSize int64
-
-			// Status is the response code indicating the status of the response.
-			// Examples: 200, 404.
-			//Status int
-
-			// ResponseSize is the size of the HTTP response message sent back to the client, in bytes,
-			// including the response headers and the response body.
-			//ResponseSize int64
-
-			// Latency is the request processing latency on the server, from the time the request was
-			// received until the response was sent.
-			//Latency time.Duration
-
-			// LocalIP is the IP address (IPv4 or IPv6) of the origin server that the request
-			// was sent to.
-			//LocalIP string
-
-			// RemoteIP is the IP address (IPv4 or IPv6) of the client that issued the
-			// HTTP request. Examples: "192.168.1.1", "FE80::0202:B3FF:FE1E:8329".
-			//RemoteIP string
-
-			// CacheHit reports whether an entity was served from cache (with or without
-			// validation).
-			//CacheHit bool
-
-			// CacheValidatedWithOriginServer reports whether the response was
-			// validated with the origin server before being served from cache. This
-			// field is only meaningful if CacheHit is true.
-			//CacheValidatedWithOriginServer bool
-		},
-		Trace:        trace,
-		TraceSampled: true,
-		SpanID:       sc.SpanID.String(),
-		//Payload interface{}
-		//Labels map[string]string
-		//InsertID string
-		//Operation *logpb.LogEntryOperation
-	})
-
 	h.applicationLogger.Log(logging.Entry{
 		Timestamp:    time.Now(),
 		Severity:     logging.Critical,
@@ -150,7 +180,7 @@ func (h *IndexHandler) index(c echo.Context) error {
 		//Operation *logpb.LogEntryOperation
 	})
 
-	return c.String(http.StatusOK, "Index!")
+	return c.String(http.StatusTeapot, "Index!")
 }
 
 func hello(c echo.Context) error {
