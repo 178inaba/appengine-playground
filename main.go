@@ -57,7 +57,6 @@ func hello(c echo.Context) error {
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	if projectID != "" {
 		traceHeader := c.Request().Header.Get("X-Cloud-Trace-Context")
-		fmt.Println(traceHeader)
 		traceParts := strings.Split(traceHeader, "/")
 		if len(traceParts) > 0 && len(traceParts[0]) > 0 {
 			trace = fmt.Sprintf("projects/%s/traces/%s", projectID, traceParts[0])
