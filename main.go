@@ -69,8 +69,6 @@ func hello(c echo.Context) error {
 		Trace:     trace,
 	})
 
-	fmt.Fprintln(c.Response().Writer, "Hello Logger!")
-
 	return c.String(http.StatusOK, "Hello, World!")
 }
 
