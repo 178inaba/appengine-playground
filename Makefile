@@ -1,18 +1,20 @@
-.PHONY: all mod-download fmt fmt-diff ci-lint lint vet test deploy install-tools
+LOCAL_PACKAGE_PREFIX := github.com/178inaba/appengine-playground
 
-all: fmt-diff ci-lint lint vet test
+.PHONY: all fmt fmt-diff ci-lint ci-lint-fix lint vet test install-tools go-get-tools
 
-mod-download:
-	go mod download
+all: ci-lint-fix fmt ci-lint lint vet test
 
 fmt:
-	goimports -w .
+	goimports -local '$(LOCAL_PACKAGE_PREFIX)' -w .
 
 fmt-diff:
-	test -z $$(goimports -l .) || (goimports -d . && exit 1)
+	test -z $$(goimports -local '$(LOCAL_PACKAGE_PREFIX)' -l .) || (goimports -local '$(LOCAL_PACKAGE_PREFIX)' -d . && exit 1)
 
 ci-lint:
 	golangci-lint run
+
+ci-lint-fix:
+	golangci-lint run --fix
 
 lint:
 	golint -set_exit_status ./...
@@ -21,10 +23,10 @@ vet:
 	go vet ./...
 
 test:
-	go test -race -count 1 ./...
+	go test -race -count 1 -cover ./...
 
-deploy:
-	gcloud app deploy --version $$(git rev-parse --short HEAD) --no-promote
+install-tools: go-get-tools
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.27.0
 
-install-tools:
-	GO111MODULE=off go get -u golang.org/x/tools/cmd/goimports golang.org/x/lint/golint github.com/golangci/golangci-lint/cmd/golangci-lint
+go-get-tools:
+	GO111MODULE=off go get -u golang.org/x/lint/golint golang.org/x/tools/cmd/goimports
