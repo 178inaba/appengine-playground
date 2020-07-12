@@ -11,6 +11,15 @@ import (
 	mrpb "google.golang.org/genproto/googleapis/api/monitoredres"
 )
 
+type ContextLogger struct {
+	echo.Context
+	logger echo.Logger
+}
+
+func (cl *ContextLogger) Logger() echo.Logger {
+	return cl.logger
+}
+
 type LoggerMiddleware struct {
 	client *logging.Client
 
@@ -45,10 +54,9 @@ func (m *LoggerMiddleware) Logger(next echo.HandlerFunc) echo.HandlerFunc {
 		spanID := sc.SpanID.String()
 
 		logger := New(appLogger, trace, spanID)
-		c.Echo().Logger = logger // TODO
 
 		start := time.Now()
-		if err := next(c); err != nil {
+		if err := next(&ContextLogger{Context: c, logger: logger}); err != nil {
 			c.Error(err) // TODO
 		}
 		end := time.Now()
