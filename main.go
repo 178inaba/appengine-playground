@@ -61,6 +61,12 @@ func index(c echo.Context) error {
 	c.Logger().Info("Start index.")
 	defer c.Logger().Info("End index.")
 
+	c.Logger().Print("Print.")
+	c.Logger().Debug("Debug.")
+	c.Logger().Info("Info.")
+	c.Logger().Warn("Warning.")
+	c.Logger().Error("Error.")
+
 	return c.String(http.StatusTeapot, "Index!")
 }
 
