@@ -1,132 +1,170 @@
 package log
 
 import (
+	"fmt"
 	"io"
+	"os"
+	"time"
 
+	"cloud.google.com/go/logging"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
+	logpb "google.golang.org/genproto/googleapis/logging/v2"
 )
 
 var _ echo.Logger = (*Logger)(nil)
 
-type Logger struct {
-	logger *log.Logger
+var severityLogLevel = map[logging.Severity]log.Lvl{
+	logging.Default:  0,
+	logging.Debug:    log.DEBUG,
+	logging.Info:     log.INFO,
+	logging.Warning:  log.WARN,
+	logging.Error:    log.ERROR,
+	logging.Critical: 6,
+	logging.Alert:    7,
 }
 
-func New(prefix string) *Logger {
+type Logger struct {
+	logger *logging.Logger
+
+	trace  string
+	spanID string
+	level  log.Lvl
+}
+
+func New(logger *logging.Logger, trace, spanID string) *Logger {
 	return &Logger{
-		logger: log.New(prefix),
+		logger: logger,
+		trace:  trace,
+		spanID: spanID,
 	}
 }
 
-func (l *Logger) Output() io.Writer {
-	return l.logger.Output()
-}
-
-func (l *Logger) SetOutput(w io.Writer) {
-	l.logger.SetOutput(w)
-}
-
-func (l *Logger) Prefix() string {
-	return l.logger.Prefix()
-}
-
-func (l *Logger) SetPrefix(p string) {
-	l.logger.SetPrefix(p)
-}
+func (l *Logger) Output() io.Writer     { return nil }
+func (l *Logger) SetOutput(w io.Writer) {}
+func (l *Logger) Prefix() string        { return "" }
+func (l *Logger) SetPrefix(p string)    {}
+func (l *Logger) SetHeader(h string)    {}
 
 func (l *Logger) Level() log.Lvl {
-	return l.logger.Level()
+	return l.level
 }
 
 func (l *Logger) SetLevel(v log.Lvl) {
-	l.SetLevel(v)
-}
-
-func (l *Logger) SetHeader(h string) {
-	l.logger.SetHeader(h)
+	l.level = v
 }
 
 func (l *Logger) Print(i ...interface{}) {
-	l.logger.Print(i...)
+	l.log(logging.Default, fmt.Sprint(i...))
 }
 
 func (l *Logger) Printf(format string, args ...interface{}) {
-	l.logger.Printf(format, args...)
+	l.log(logging.Default, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) Printj(j log.JSON) {
-	l.logger.Panicj(j)
+	l.log(logging.Default, j)
 }
 
 func (l *Logger) Debug(i ...interface{}) {
-	l.logger.Debug(i...)
+	l.log(logging.Debug, fmt.Sprint(i...))
 }
 
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.logger.Debugf(format, args...)
+	l.log(logging.Debug, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) Debugj(j log.JSON) {
-	l.logger.Debugj(j)
+	l.log(logging.Debug, j)
 }
 
 func (l *Logger) Info(i ...interface{}) {
-	l.logger.Info(i...)
+	l.log(logging.Info, fmt.Sprint(i...))
 }
 
 func (l *Logger) Infof(format string, args ...interface{}) {
-	l.logger.Infof(format, args...)
+	l.log(logging.Info, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) Infoj(j log.JSON) {
-	l.logger.Infoj(j)
+	l.log(logging.Info, j)
 }
 
 func (l *Logger) Warn(i ...interface{}) {
-	l.logger.Warn(i...)
+	l.log(logging.Warning, fmt.Sprint(i...))
 }
 
 func (l *Logger) Warnf(format string, args ...interface{}) {
-	l.logger.Warnf(format, args...)
+	l.log(logging.Warning, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) Warnj(j log.JSON) {
-	l.logger.Warnj(j)
+	l.log(logging.Warning, j)
 }
 
 func (l *Logger) Error(i ...interface{}) {
-	l.logger.Error(i...)
+	l.log(logging.Error, fmt.Sprint(i...))
 }
 
 func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.logger.Errorf(format, args...)
+	l.log(logging.Error, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) Errorj(j log.JSON) {
-	l.logger.Errorj(j)
+	l.log(logging.Error, j)
 }
 
 func (l *Logger) Fatal(i ...interface{}) {
-	l.logger.Fatal(i...)
+	l.log(logging.Critical, fmt.Sprint(i...))
+	l.logger.Flush()
+	os.Exit(1)
 }
 
 func (l *Logger) Fatalf(format string, args ...interface{}) {
-	l.logger.Fatalf(format, args...)
+	l.log(logging.Critical, fmt.Sprintf(format, args...))
+	l.logger.Flush()
+	os.Exit(1)
 }
 
 func (l *Logger) Fatalj(j log.JSON) {
-	l.logger.Fatalj(j)
+	l.log(logging.Critical, j)
+	l.logger.Flush()
+	os.Exit(1)
 }
 
 func (l *Logger) Panic(i ...interface{}) {
-	l.logger.Panic(i...)
+	s := fmt.Sprint(i...)
+	l.log(logging.Alert, s)
+	panic(s)
 }
 
 func (l *Logger) Panicf(format string, args ...interface{}) {
-	l.logger.Panicf(format, args...)
+	s := fmt.Sprintf(format, args...)
+	l.log(logging.Alert, s)
+	panic(s)
 }
 
 func (l *Logger) Panicj(j log.JSON) {
-	l.logger.Panicj(j)
+	l.log(logging.Alert, j)
+	panic(j)
+}
+
+func (l *Logger) log(severity logging.Severity, payload interface{}) {
+	if l.level >= severityLogLevel[severity] {
+		return
+	}
+
+	l.logger.Log(logging.Entry{
+		Timestamp:    time.Now(),
+		Severity:     severity,
+		Trace:        l.trace,
+		TraceSampled: true,
+		SourceLocation: &logpb.LogEntrySourceLocation{
+			File:     "main.go",
+			Line:     101,
+			Function: "index",
+		},
+		SpanID:  l.spanID,
+		Payload: payload,
+	})
 }
