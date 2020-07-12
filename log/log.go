@@ -28,6 +28,8 @@ type Logger struct {
 	trace  string
 	spanID string
 	level  log.Lvl
+
+	maxSeverity logging.Severity
 }
 
 func New(logger *logging.Logger, trace, spanID string) *Logger {
@@ -150,6 +152,10 @@ func (l *Logger) Panicj(j log.JSON) {
 func (l *Logger) log(severity logging.Severity, payload interface{}) {
 	if l.level >= severityLogLevel[severity] {
 		return
+	}
+
+	if severity > l.maxSeverity {
+		l.maxSeverity = severity
 	}
 
 	pc, file, line, _ := runtime.Caller(2)

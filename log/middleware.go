@@ -65,7 +65,7 @@ func (m *LoggerMiddleware) Logger(next echo.HandlerFunc) echo.HandlerFunc {
 		remoteIP := strings.Split(req.Header.Get("X-Forwarded-For"), ",")[0]
 		reqLogger.Log(logging.Entry{
 			Timestamp: time.Now(),
-			Severity:  logging.Error,
+			Severity:  logger.maxSeverity,
 			HTTPRequest: &logging.HTTPRequest{
 				Request:      req,
 				Latency:      end.Sub(start),
