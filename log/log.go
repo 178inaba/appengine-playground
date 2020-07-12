@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"time"
 
 	"cloud.google.com/go/logging"
-	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	logpb "google.golang.org/genproto/googleapis/logging/v2"
 )
-
-var _ echo.Logger = (*Logger)(nil)
 
 var severityLogLevel = map[logging.Severity]log.Lvl{
 	logging.Default:  0,
@@ -154,15 +152,17 @@ func (l *Logger) log(severity logging.Severity, payload interface{}) {
 		return
 	}
 
+	pc, file, line, _ := runtime.Caller(2)
+	f := runtime.FuncForPC(pc)
 	l.logger.Log(logging.Entry{
 		Timestamp:    time.Now(),
 		Severity:     severity,
 		Trace:        l.trace,
 		TraceSampled: true,
 		SourceLocation: &logpb.LogEntrySourceLocation{
-			File:     "main.go",
-			Line:     101,
-			Function: "index",
+			File:     file,
+			Line:     int64(line),
+			Function: f.Name(),
 		},
 		SpanID:  l.spanID,
 		Payload: payload,
