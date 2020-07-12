@@ -69,6 +69,7 @@ func sleep(c echo.Context) error {
 	defer c.Logger().Info("End sleep.")
 
 	time.Sleep(10 * time.Second)
+	c.Logger().Info("sleeped!!!")
 
 	return c.String(http.StatusCreated, "Sleep!")
 }
