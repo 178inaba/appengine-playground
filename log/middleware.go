@@ -57,7 +57,7 @@ func (m *LoggerMiddleware) Logger(next echo.HandlerFunc) echo.HandlerFunc {
 
 		start := time.Now()
 		if err := next(&ContextLogger{Context: c, logger: logger}); err != nil {
-			c.Error(err) // TODO
+			c.Error(err)
 		}
 		end := time.Now()
 
