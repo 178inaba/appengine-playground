@@ -70,7 +70,7 @@ func sleep(c echo.Context) error {
 
 	time.Sleep(10 * time.Second)
 
-	return c.String(http.StatusNoContent, "Sleep!")
+	return c.String(http.StatusCreated, "Sleep!")
 }
 
 func hello(c echo.Context) error {
