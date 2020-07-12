@@ -20,6 +20,10 @@ type LoggerMiddleware struct {
 	zone      string
 }
 
+func NewLoggerMiddleware(client *logging.Client, moduleID, projectID, versionID, zone string) *LoggerMiddleware {
+	return &LoggerMiddleware{client: client, moduleID: moduleID, projectID: projectID, versionID: versionID, zone: zone}
+}
+
 func (m *LoggerMiddleware) Logger(next echo.HandlerFunc) echo.HandlerFunc {
 	hf := &propagation.HTTPFormat{}
 
