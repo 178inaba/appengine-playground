@@ -8,6 +8,7 @@ import (
 	"cloud.google.com/go/logging"
 	"contrib.go.opencensus.io/exporter/stackdriver/propagation"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/gommon/log"
 	mrpb "google.golang.org/genproto/googleapis/api/monitoredres"
 )
 
@@ -54,6 +55,7 @@ func (m *LoggerMiddleware) Logger(next echo.HandlerFunc) echo.HandlerFunc {
 		spanID := sc.SpanID.String()
 
 		logger := New(appLogger, trace, spanID)
+		logger.SetLevel(log.INFO)
 
 		start := time.Now()
 		if err := next(&ContextLogger{Context: c, logger: logger}); err != nil {
