@@ -12,10 +12,11 @@ import (
 	"time"
 
 	"cloud.google.com/go/logging"
-	logginglog "github.com/178inaba/appengine-playground/log"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echolog "github.com/labstack/gommon/log"
+
+	logginglog "github.com/178inaba/appengine-playground/log"
 )
 
 func main() {
