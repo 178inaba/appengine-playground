@@ -22,6 +22,7 @@ var severityLogLevel = map[logging.Severity]log.Lvl{
 	logging.Alert:    7,
 }
 
+// Logger is cloud logging logger.
 type Logger struct {
 	logger *logging.Logger
 
