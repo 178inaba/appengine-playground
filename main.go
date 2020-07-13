@@ -36,7 +36,7 @@ func main() {
 
 	service := os.Getenv("GAE_SERVICE")
 	version := os.Getenv("GAE_VERSION")
-	lm := aelogging.NewLoggerMiddleware(loggingClient, service, projectID, version, zone)
+	lm := aelogging.NewLoggerMiddleware(loggingClient, echolog.DEBUG, service, projectID, version, zone)
 
 	e := echo.New()
 	e.Logger.SetLevel(echolog.INFO)

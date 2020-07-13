@@ -5,7 +5,7 @@ go 1.13
 require (
 	cloud.google.com/go v0.60.0 // indirect
 	cloud.google.com/go/logging v1.0.0
-	github.com/178inaba/appengine-echo-logging v0.0.0-20200713173334-3591379006ef
+	github.com/178inaba/appengine-echo-logging v0.0.0-20200713180611-30e7147ff93d
 	github.com/labstack/echo/v4 v4.1.16
 	github.com/labstack/gommon v0.3.0
 	github.com/mattn/go-colorable v0.1.7 // indirect
