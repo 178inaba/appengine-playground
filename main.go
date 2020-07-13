@@ -67,7 +67,15 @@ func index(c echo.Context) error {
 	c.Logger().Info("Info.")
 	c.Logger().Warn("Warning.")
 	c.Logger().Error("Error.")
-	c.Logger().Errorf("c.Request().ContentLength: %d.", c.Request().ContentLength)
+
+	c.Logger().Infof("c.Request().ContentLength: %d.", c.Request().ContentLength)
+
+	bs, err := ioutil.ReadAll(c.Request().Body)
+	if err != nil {
+		c.Logger().Errorf("Read body: %s.", err)
+	}
+
+	c.Logger().Infof("Body: %q.", bs)
 
 	return c.String(http.StatusTeapot, "Index!")
 }
