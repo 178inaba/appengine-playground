@@ -44,6 +44,7 @@ func main() {
 	e.Use(middleware.Recover())
 
 	e.GET("/", index)
+	e.POST("/", index)
 	e.GET("/sleep", sleep)
 	e.GET("/hello", hello)
 	e.GET("/_ah/warmup", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
@@ -66,7 +67,7 @@ func index(c echo.Context) error {
 	c.Logger().Info("Info.")
 	c.Logger().Warn("Warning.")
 	c.Logger().Error("Error.")
-	c.Logger().Error("c.Request().ContentLength: %d.", c.Request().ContentLength)
+	c.Logger().Errorf("c.Request().ContentLength: %d.", c.Request().ContentLength)
 
 	return c.String(http.StatusTeapot, "Index!")
 }
