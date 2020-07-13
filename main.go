@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/logging"
-	gaelogging "github.com/178inaba/appengine-echo-logging"
+	aelogging "github.com/178inaba/appengine-echo-logging"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echolog "github.com/labstack/gommon/log"
@@ -36,7 +36,7 @@ func main() {
 
 	service := os.Getenv("GAE_SERVICE")
 	version := os.Getenv("GAE_VERSION")
-	lm := gaelogging.NewLoggerMiddleware(loggingClient, service, projectID, version, zone)
+	lm := aelogging.NewLoggerMiddleware(loggingClient, service, projectID, version, zone)
 
 	e := echo.New()
 	e.Logger.SetLevel(echolog.INFO)
