@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -70,7 +70,7 @@ func index(c echo.Context) error {
 
 	c.Logger().Infof("c.Request().ContentLength: %d.", c.Request().ContentLength)
 
-	bs, err := ioutil.ReadAll(c.Request().Body)
+	bs, err := io.ReadAll(c.Request().Body)
 	if err != nil {
 		c.Logger().Errorf("Read body: %s.", err)
 	}
@@ -130,7 +130,7 @@ func metadataZone(ctx context.Context) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	bs, err := ioutil.ReadAll(resp.Body)
+	bs, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
