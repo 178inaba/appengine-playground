@@ -17,12 +17,10 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
           cache: true
-      - name: Install lint tools
-        run: make -s go-get-tools
+      - name: Install tools
+        run: make -s go-install-tools
       - name: Run Gofmt diff
         run: make -s fmt-diff
-      - name: Run Golint
-        run: make -s lint
       - name: Run Vet
         run: make -s vet
 
