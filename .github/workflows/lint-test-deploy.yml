@@ -2,9 +2,13 @@ name: Test
 
 on: push
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
-    name: Lint
+    name: Gofmt and Vet
     runs-on: ubuntu-latest
     strategy:
       matrix:
