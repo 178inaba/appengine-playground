@@ -1,53 +1,66 @@
-name: Lint and Test
+name: Test
 
 on: push
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
-    name: Lint ${{ matrix.go }}
+    name: Gofmt and Vet
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.13', '1.14' ]
+        go: [ '1.19', '1.20' ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
-      - name: Install lint tools
-        run: make -s go-get-tools
+          cache: true
+      - name: Install tools
+        run: make -s go-install-tools
       - name: Run Gofmt diff
         run: make -s fmt-diff
-      - name: Run Golint
-        run: make -s lint
       - name: Run Vet
         run: make -s vet
 
   golangci-lint:
     name: GolangCI Lint
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [ '1.19', '1.20' ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-      - name: GolangCI Lint
-        uses: golangci/golangci-lint-action@v1
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
         with:
-          version: v1.27
+          go-version: ${{ matrix.go }}
+          cache: true
+      - name: GolangCI Lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.51.2
+          skip-pkg-cache: true
 
   test:
-    name: Test ${{ matrix.go }}
+    name: Test
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.13', '1.14' ]
+        go: [ '1.19', '1.20' ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
+          cache: true
       - name: Test
         run: make -s test
