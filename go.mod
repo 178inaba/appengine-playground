@@ -1,6 +1,6 @@
 module github.com/178inaba/appengine-playground
 
-go 1.14
+go 1.20
 
 require (
 	cloud.google.com/go v0.61.0 // indirect
