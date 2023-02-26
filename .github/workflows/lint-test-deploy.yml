@@ -8,14 +8,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.13', '1.14' ]
+        go: [ '1.19', '1.20' ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
+          cache: true
       - name: Install lint tools
         run: make -s go-get-tools
       - name: Run Gofmt diff
@@ -28,26 +29,36 @@ jobs:
   golangci-lint:
     name: GolangCI Lint
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [ '1.19', '1.20' ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-      - name: GolangCI Lint
-        uses: golangci/golangci-lint-action@v1
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
         with:
-          version: v1.27
+          go-version: ${{ matrix.go }}
+          cache: true
+      - name: GolangCI Lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.51.2
+          skip-pkg-cache: true
 
   test:
     name: Test ${{ matrix.go }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.13', '1.14' ]
+        go: [ '1.19', '1.20' ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
+          cache: true
       - name: Test
         run: make -s test
